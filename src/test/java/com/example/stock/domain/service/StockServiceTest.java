@@ -1,10 +1,9 @@
 package com.example.stock.domain.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.stock.domain.Stock;
-import com.example.stock.domain.StockRepository;
+import com.example.stock.repository.StockRepository;
 import com.example.stock.facade.OptimisticLockStockFacade;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;

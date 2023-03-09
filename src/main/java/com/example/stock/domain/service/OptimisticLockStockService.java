@@ -1,7 +1,7 @@
 package com.example.stock.domain.service;
 
 import com.example.stock.domain.Stock;
-import com.example.stock.domain.StockRepository;
+import com.example.stock.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
