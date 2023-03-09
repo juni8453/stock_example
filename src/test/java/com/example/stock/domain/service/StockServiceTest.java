@@ -3,8 +3,11 @@ package com.example.stock.domain.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.stock.domain.Stock;
-import com.example.stock.repository.StockRepository;
+import com.example.stock.facade.LettuceLockStockFacade;
 import com.example.stock.facade.OptimisticLockStockFacade;
+import com.example.stock.repository.StockRepository;
+import com.example.stock.service.PessimisticLockStockService;
+import com.example.stock.service.StockService;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,6 +28,9 @@ class StockServiceTest {
 
   @Autowired
   private OptimisticLockStockFacade optimisticLockStockFacade;
+
+  @Autowired
+  private LettuceLockStockFacade lettuceLockStockFacade;
 
   @Autowired
   private StockRepository stockRepository;
@@ -123,4 +129,32 @@ class StockServiceTest {
     Stock findStock = stockRepository.findById(1L).orElseThrow();
     assertThat(findStock.getQuantity()).isEqualTo(0L);
   }
+
+
+  @Test
+  void 동시에_100개의_재고감소_LettuceLock_사용() throws Exception {
+    int threadCount = 100;
+    ExecutorService executorService = Executors.newFixedThreadPool(32);
+    CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+
+    for (int i = 0; i < threadCount; i++) {
+      executorService.submit(() -> {
+        try {
+          lettuceLockStockFacade.decrease(1L, 1L);
+
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+
+        } finally {
+          countDownLatch.countDown();
+        }
+      });
+    }
+
+    countDownLatch.await();
+
+    Stock findStock = stockRepository.findById(1L).orElseThrow();
+    assertThat(findStock.getQuantity()).isEqualTo(0L);
+  }
+
 }

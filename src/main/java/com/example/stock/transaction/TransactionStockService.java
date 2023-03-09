@@ -1,6 +1,6 @@
 package com.example.stock.transaction;
 
-import com.example.stock.domain.service.StockService;
+import com.example.stock.service.StockService;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor

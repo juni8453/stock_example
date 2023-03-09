@@ -1,6 +1,6 @@
 package com.example.stock.facade;
 
-import com.example.stock.domain.service.OptimisticLockStockService;
+import com.example.stock.service.OptimisticLockStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
