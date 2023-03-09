@@ -21,6 +21,9 @@ class StockServiceTest {
   private StockService stockService;
 
   @Autowired
+  private PessimisticLockStockService pessimisticLockStockService;
+
+  @Autowired
   private StockRepository stockRepository;
 
   @BeforeEach
@@ -49,7 +52,7 @@ class StockServiceTest {
   // 1번 쓰레드가 데이터를 조회 후 갱신하기 전에 2번 쓰레드가 데이터를 조회하고 1번 쓰레드가 값을 갱신, 2번 쓰레드가 값을 갱신하기 떄문에
   // 재고가 5인 상태라고 한다면 둘 다 1을 줄인 값 즉, 4를 갱신하기 때문에 갱신이 누락되게 된다.
   @Test
-  void 동시에_100개의_재고감소() throws Exception {
+  void 동시에_100개의_재고감소_동시성_이슈_발생() throws Exception {
     int threadCount = 100;
     ExecutorService executorService = Executors.newFixedThreadPool(32); // 32 개의 쓰레드풀 생성
     CountDownLatch countDownLatch = new CountDownLatch(threadCount); // 100 개의 쓰레드가 끝나면 다음 쓰레드를 실행
@@ -67,6 +70,28 @@ class StockServiceTest {
     countDownLatch.await(); // 카운트가 0이되면 대기가 풀리고 이후 쓰레드가 실행
 
     Stock findStock = stockRepository.findById(1L).orElseThrow();
-    assertThat(findStock.getQuantity()).isEqualTo(0);
+    assertThat(findStock.getQuantity()).isEqualTo(0L);
+  }
+
+  @Test
+  void 동시에_100개의_재고감소_PessimisticLock_사용() throws Exception {
+    int threadCount = 100;
+    ExecutorService executorService = Executors.newFixedThreadPool(32);
+    CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+
+    for (int i = 0; i < threadCount; i++) {
+      executorService.submit(() -> {
+        try {
+          pessimisticLockStockService.decrease(1L, 1L);
+        } finally {
+          countDownLatch.countDown();
+        }
+      });
+    }
+
+    countDownLatch.await();
+
+    Stock findStock = stockRepository.findById(1L).orElseThrow();
+    assertThat(findStock.getQuantity()).isEqualTo(0L);
   }
 }
