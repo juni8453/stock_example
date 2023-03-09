@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.stock.domain.Stock;
 import com.example.stock.facade.LettuceLockStockFacade;
 import com.example.stock.facade.OptimisticLockStockFacade;
+import com.example.stock.facade.RedissonLockFacade;
 import com.example.stock.repository.StockRepository;
 import com.example.stock.service.PessimisticLockStockService;
 import com.example.stock.service.StockService;
@@ -31,6 +32,9 @@ class StockServiceTest {
 
   @Autowired
   private LettuceLockStockFacade lettuceLockStockFacade;
+
+  @Autowired
+  private RedissonLockFacade redissonLockFacade;
 
   @Autowired
   private StockRepository stockRepository;
@@ -145,6 +149,28 @@ class StockServiceTest {
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
 
+        } finally {
+          countDownLatch.countDown();
+        }
+      });
+    }
+
+    countDownLatch.await();
+
+    Stock findStock = stockRepository.findById(1L).orElseThrow();
+    assertThat(findStock.getQuantity()).isEqualTo(0L);
+  }
+
+  @Test
+  void 동시에_100개의_재고감소_RedissonLock_사용() throws Exception {
+    int threadCount = 100;
+    ExecutorService executorService = Executors.newFixedThreadPool(32);
+    CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+
+    for (int i = 0; i < threadCount; i++) {
+      executorService.submit(() -> {
+        try {
+          redissonLockFacade.decrease(1L, 1L);
         } finally {
           countDownLatch.countDown();
         }
