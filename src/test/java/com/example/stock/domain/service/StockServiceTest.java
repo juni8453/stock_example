@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.stock.domain.Stock;
 import com.example.stock.domain.StockRepository;
+import com.example.stock.facade.OptimisticLockStockFacade;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,6 +23,9 @@ class StockServiceTest {
 
   @Autowired
   private PessimisticLockStockService pessimisticLockStockService;
+
+  @Autowired
+  private OptimisticLockStockFacade optimisticLockStockFacade;
 
   @Autowired
   private StockRepository stockRepository;
@@ -83,6 +87,32 @@ class StockServiceTest {
       executorService.submit(() -> {
         try {
           pessimisticLockStockService.decrease(1L, 1L);
+        } finally {
+          countDownLatch.countDown();
+        }
+      });
+    }
+
+    countDownLatch.await();
+
+    Stock findStock = stockRepository.findById(1L).orElseThrow();
+    assertThat(findStock.getQuantity()).isEqualTo(0L);
+  }
+
+  @Test
+  void 동시에_100개의_재고감소_OptimisticLock_사용() throws Exception {
+    int threadCount = 100;
+    ExecutorService executorService = Executors.newFixedThreadPool(32);
+    CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+
+    for (int i = 0; i < threadCount; i++) {
+      executorService.submit(() -> {
+        try {
+          optimisticLockStockFacade.decrease(1L, 1L);
+
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+
         } finally {
           countDownLatch.countDown();
         }
